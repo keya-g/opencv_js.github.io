@@ -1,0 +1,183 @@
+
+// Following code lets you get video data from camera device as per constraints and display to the video tag. 
+// (https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)
+document.addEventListener("mousemove", mouseMoveHandler, false);
+document.addEventListener("mousedown", mouseDownHandler, false);
+var video = document.getElementById("videoInput"); // video is the id of video tag
+var canvas = document.getElementById("canvasOutput");
+var canvas2 = document.getElementById("videoCanvas");
+var context = canvas.getContext("2d");
+var context2 = canvas2.getContext("2d");
+var streaming = false;
+navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+    .then(function(stream) {
+        video.srcObject = stream;
+        video.play();
+        streaming = true;
+    })
+    .catch(function(err) {
+        console.log("An error occurred! " + err);
+    });
+
+
+var cv_built = false;
+var cap = null;
+const FPS = 30;
+var pointX = 0;
+var pointY = 0;
+
+var pointcX = 0;
+var pointcY = 0;
+
+var lower = [170, 180, 70, 0];
+var higher = [180, 255, 255, 255];
+var mom = null;
+
+
+
+cv['onRuntimeInitialized']=()=>{
+    console.log(cv.getBuildInformation());
+    cv_built = true;
+    if (cap == null){
+        src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+        hsv = new cv.Mat(video.height, video.width, cv.CV_8UC3);
+        dst = new cv.Mat(video.height, video.width, cv.CV_8UC1);
+        cap = new cv.VideoCapture(video);
+        center = new cv.Point([0,0]);
+    }
+};
+
+function deletevar(variable){
+    try{
+        variable.delete();
+    }catch{}
+}
+
+function processVideo() {
+    
+    src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+    hsv = new cv.Mat(video.height, video.width, cv.CV_8UC3);
+    
+    // start processing.
+    cap.read(src);
+    var center = new cv.Point(pointcX, pointcY);
+    dst = src.clone();
+    cv.circle(dst, center, 1, [200,255,0,255], 8);
+    cv.cvtColor(src, hsv, cv.COLOR_RGB2HSV);
+    // [dst, center, ...rest] = blobdetect(src, dst, hsv);
+    
+    cv.imshow('canvasOutput', dst);
+    src.delete();
+    dst.delete();
+    hsv.delete();
+}
+
+function main(){
+    if (cv_built == true && streaming){
+        var begin = Date.now();
+        var delay = 1000/FPS - (Date.now() - begin);
+        setTimeout(processVideo, delay);
+    }
+}
+
+function blobdetect(src, dst, hsv){
+    var low = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), lower);
+    var high = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), higher);
+    var mask = hsv.clone();
+    var contours = new cv.MatVector();
+    var hierarchy = new cv.Mat();
+
+    cv.inRange(mask, low, high, mask);
+    cv.imshow('videoCanvas', mask);
+    low.delete();
+    high.delete();
+
+    cv.findContours(mask, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+    mask.delete();
+    hierarchy.delete();
+    var blob_area = 0;
+    if (contours.size() > 0){
+        var blob = contours.get(0);
+        for (var i = 0; i < contours.size(); i++){
+            if (cv.contourArea(contours.get(i)) > cv.contourArea(blob)){blob = contours.get(i);}
+        }
+        mom = cv.moments(blob);
+        center = new cv.Point(Math.round(mom.m10/mom.m00), Math.round(mom.m01/mom.m00));
+        var blob_vec = new cv.MatVector();
+        blob_vec[0] = blob;
+        cv.drawContours(dst, blob_vec, 1, [0,255,0,255], 5);
+        cv.circle(dst, center, 1,[0,0,255,255],7);
+        blob_area = cv.contourArea(blob);
+        blob_vec.delete();
+        blob.delete();
+        mom = null;
+    }
+    contours.delete();
+    return [dst, center, blob_area];
+}
+
+function mouseDownHandler(e) {
+
+    var relativeX = e.clientX - canvas.offsetLeft;
+    var relativeY = e.clientY - canvas.offsetTop;
+    if(relativeX > 0 && relativeX < canvas.width) {
+        pointcX = relativeX;
+    }
+
+    if(relativeY > 0 && relativeY < canvas.height) {
+        pointcY = relativeY;
+    }
+
+    if (cv_built){
+        src_local = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+        cap.read(src_local);
+        var hsv_local = new cv.Mat(video.height, video.width, cv.CV_8UC3);
+        cv.cvtColor(src_local, hsv_local, cv.COLOR_RGB2HSV);
+        pickColor(src_local, hsv_local, pointcX, pointcY);
+        hsv_local.delete();
+        src_local.delete();
+    }
+}
+
+function pickColor(src_local, hsv_local, x, y){
+
+    // cv.imshow('conClickOutput',hsv_local);
+    console.log(hsv_local.ucharPtr(x,y));
+    var center = new cv.Point(x, y);
+    var pixel = hsv_local.ucharPtr(x,y);
+
+    upper =  arrayClamp([pixel[0] + 10, pixel[1] + 80, pixel[2] + 100, 255],0,255);
+    lower =  arrayClamp([pixel[0] - 10, pixel[1] - 80, pixel[2] - 100, 200],0,255);
+    console.log(pixel);
+}
+
+
+function clamp(num, min, max) {
+  return num <= min ? min : num >= max ? max : num;
+}
+
+function arrayClamp(og_array, min, max) {
+    // // console.log(og_array, min, max);
+    for(c = 0; c < og_array.length; c++){
+        num = og_array[c];
+        og_array[c] = clamp(num, min, max);
+    }
+    return og_array;
+}
+
+function mouseMoveHandler(e) {
+
+    var relativeX = e.clientX - canvas.offsetLeft;
+    var relativeY = e.clientY - canvas.offsetTop;
+    if(relativeX > 0 && relativeX < canvas.width) {
+        pointX = relativeX;
+    }
+
+    if(relativeY > 0 && relativeY < canvas.height) {
+        pointY = relativeY;
+    }
+}
+
+
+
+var interval = setInterval(main, 0);
