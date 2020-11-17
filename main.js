@@ -29,8 +29,8 @@ var pointY = 0;
 var pointcX = 0;
 var pointcY = 0;
 
-var lower = [170, 180, 70, 0];
-var higher = [180, 255, 255, 255];
+var lower = [145, 67, 20, 0];
+var higher = [165, 67, 20, 255];
 var mom = null;
 
 
@@ -60,11 +60,12 @@ function processVideo() {
     
     // start processing.
     cap.read(src);
+    // cv.flip(src, src, 1);
     var center = new cv.Point(pointcX, pointcY);
     dst = src.clone();
     cv.circle(dst, center, 1, [200,255,0,255], 8);
     cv.cvtColor(src, hsv, cv.COLOR_RGB2HSV);
-    // [dst, center, ...rest] = blobdetect(src, dst, hsv);
+    [dst, center, ...rest] = blobdetect(src, dst, hsv);
     
     cv.imshow('canvasOutput', dst);
     src.delete();
@@ -87,8 +88,10 @@ function blobdetect(src, dst, hsv){
     var contours = new cv.MatVector();
     var hierarchy = new cv.Mat();
 
+    
     cv.inRange(mask, low, high, mask);
     cv.imshow('videoCanvas', mask);
+
     low.delete();
     high.delete();
 
@@ -141,13 +144,13 @@ function mouseDownHandler(e) {
 
 function pickColor(src_local, hsv_local, x, y){
 
-    // cv.imshow('conClickOutput',hsv_local);
+
     console.log(hsv_local.ucharPtr(x,y));
     var center = new cv.Point(x, y);
-    var pixel = hsv_local.ucharPtr(x,y);
+    var pixel = hsv_local.ucharPtr(y, x);
 
-    upper =  arrayClamp([pixel[0] + 10, pixel[1] + 80, pixel[2] + 100, 255],0,255);
-    lower =  arrayClamp([pixel[0] - 10, pixel[1] - 80, pixel[2] - 100, 200],0,255);
+    higher =  arrayClamp([pixel[0] + 10, pixel[1] + 80, pixel[2] + 100, 255],0,255);
+    lower =  arrayClamp([pixel[0] - 10, pixel[1] - 80, pixel[2] - 100, 255],0,255);
     console.log(pixel);
 }
 
