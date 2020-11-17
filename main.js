@@ -1,23 +1,31 @@
 
 // Following code lets you get video data from camera device as per constraints and display to the video tag. 
 // (https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)
-document.addEventListener("mousemove", mouseMoveHandler, false);
-document.addEventListener("mousedown", mouseDownHandler, false);
 var video = document.getElementById("videoInput"); // video is the id of video tag
 var canvas = document.getElementById("canvasOutput");
-// var canvas2 = document.getElementById("videoCanvas");
+var lcanvas = document.getElementById("leftCanvas");
+var rcanvas = document.getElementById("rightCanvas");
+var elem = document.documentElement;
+document.addEventListener("mousemove", mouseMoveHandler, false);
+document.addEventListener("mousedown", mouseDownHandler, false);
+elem.addEventListener('keypress', keypressed);
+
+
 var context = canvas.getContext("2d");
-// var context2 = canvas2.getContext("2d");
 var streaming = false;
 var window_width = window.innerWidth;
 var window_height = window.innerHeight;
 var display_width = window.innerWidth;
 var display_height = window.innerHeight;
+
+
 navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+
     .then(function(stream) {
         video.srcObject = stream;
         video.play();
         streaming = true;
+        // openFullscreen();
     })
     .catch(function(err) {
         console.log("An error occurred! " + err);
@@ -44,14 +52,7 @@ var mom = null;
 cv['onRuntimeInitialized']=()=>{
     console.log(cv.getBuildInformation());
     cv_built = true;
-    // if (src == null){
-    //     src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
-    //     hsv = new cv.Mat(video.height, video.width, cv.CV_8UC3);
-    //     dst = new cv.Mat(video.height, video.width, cv.CV_8UC1);
-        
-        center = new cv.Point([0,0]);
-
-    // }
+    center = new cv.Point([0,0]);
 };
 
 function deletevar(variable){
@@ -83,6 +84,7 @@ function processVideo() {
 }
 
 function main(){
+    // openFullscreen()
     if (cv_built == true && streaming){
         cap = new cv.VideoCapture(video);
         if (actual_height == 0){
@@ -98,13 +100,7 @@ function main(){
 
         if (video.width == 0){return;}
 
-        display_height = window_height;
-        var video_ratio = actual_width/actual_height;
-        display_width = Math.round(display_height*video_ratio);
-        var style_line = "width: " + display_width   + "px; height:" + display_height + "px;"
-        video.height = display_height; video.width = display_width;
-        canvas.setAttribute("style", style_line);
-        
+        resetDisplaySize()
         if (resetcap){
             cap = new cv.VideoCapture(video);
         }
@@ -222,6 +218,38 @@ function getMousePosition(e, canvas){
     return[relativeX, relativeY];
 }
 
+function openFullscreen() {
+    // console.log('requesting')
+  if (elem.requestFullscreen) {
+    elem.requestFullscreen();
+  } else if (elem.webkitRequestFullScreen) {
+    elem.webkitRequestFullScreen();
+  } else if (elem.mozRequestFullScreen) {
+    elem.mozRequestFullScreen();
+  } else if (elem.msRequestFullscreen) {
+    elem.msRequestFullscreen();
+  }
+}
+
+function keypressed(e){
+    // console.log(e.key);
+    if (e.key == 'f'){
+          openFullscreen();}
+}
+
+function resetDisplaySize(){
+    window_width = window.innerWidth;
+    window_height = window.innerHeight;
+    display_height = window_height;
+    var video_ratio = actual_width/actual_height;
+    display_width = Math.round(display_height*video_ratio);
+    var style_line = "width: " + display_width   + "px; height:" + display_height + "px;"
+    video.height = display_height; video.width = display_width;
+    canvas.setAttribute("style", style_line);
+    style_line = "width: " + (window_width - display_width)/2   + "px; height:" + display_height + "px;"
+    lcanvas.setAttribute("style", style_line);
+    rcanvas.setAttribute("style", style_line);
+}
 
 
 var interval = setInterval(main, 0);

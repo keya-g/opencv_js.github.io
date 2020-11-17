@@ -20,17 +20,38 @@
 <script type="text/javascript">
 let imgElement = document.getElementById('imageSrc');
 let inputElement = document.getElementById('fileInput');
+let elem = document.documentElement;
 inputElement.addEventListener('change', (e) => {
   imgElement.src = URL.createObjectURL(e.target.files[0]);
 }, false);
 imgElement.onload = function() {
+
   let mat = cv.imread(imgElement);
   cv.imshow('canvasOutput', mat);
   mat.delete();
 };
 function onOpenCvReady() {
-  document.getElementById('status').innerHTML = 'OpenCV.js is ready.';
+  document.getElementById('status').innerHTML = 'OpenCV.js is ready.';}
+function openFullscreen() {
+    console.log('requesting')
+  if (elem.requestFullscreen) {
+    elem.requestFullscreen();
+  } else if (elem.webkitRequestFullScreen) {
+    elem.webkitRequestFullScreen();
+  } else if (elem.mozRequestFullScreen) {
+    elem.mozRequestFullScreen();
+  } else if (elem.msRequestFullscreen) {
+    elem.msRequestFullscreen();
+  }
 }
+
+elem.addEventListener('keypress', keypressed);
+function keypressed(e){
+    console.log(e.key);
+    if (e.key == 'f'){
+          openFullscreen();}
+}
+
 </script>
 <script async src="opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
 </body>
