@@ -5,10 +5,14 @@ document.addEventListener("mousemove", mouseMoveHandler, false);
 document.addEventListener("mousedown", mouseDownHandler, false);
 var video = document.getElementById("videoInput"); // video is the id of video tag
 var canvas = document.getElementById("canvasOutput");
-var canvas2 = document.getElementById("videoCanvas");
+// var canvas2 = document.getElementById("videoCanvas");
 var context = canvas.getContext("2d");
-var context2 = canvas2.getContext("2d");
+// var context2 = canvas2.getContext("2d");
 var streaming = false;
+var window_width = window.innerWidth;
+var window_height = window.innerHeight;
+var display_width = window.innerWidth;
+var display_height = window.innerHeight;
 navigator.mediaDevices.getUserMedia({ video: true, audio: false })
     .then(function(stream) {
         video.srcObject = stream;
@@ -25,6 +29,8 @@ var cap = null;
 const FPS = 30;
 var pointX = 0;
 var pointY = 0;
+var actual_height = 0;
+var actual_width = 0;
 
 var pointcX = 0;
 var pointcY = 0;
@@ -38,13 +44,14 @@ var mom = null;
 cv['onRuntimeInitialized']=()=>{
     console.log(cv.getBuildInformation());
     cv_built = true;
-    if (cap == null){
-        src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
-        hsv = new cv.Mat(video.height, video.width, cv.CV_8UC3);
-        dst = new cv.Mat(video.height, video.width, cv.CV_8UC1);
-        cap = new cv.VideoCapture(video);
+    // if (src == null){
+    //     src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+    //     hsv = new cv.Mat(video.height, video.width, cv.CV_8UC3);
+    //     dst = new cv.Mat(video.height, video.width, cv.CV_8UC1);
+        
         center = new cv.Point([0,0]);
-    }
+
+    // }
 };
 
 function deletevar(variable){
@@ -54,12 +61,14 @@ function deletevar(variable){
 }
 
 function processVideo() {
-    
+
     src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
     hsv = new cv.Mat(video.height, video.width, cv.CV_8UC3);
     
     // start processing.
     cap.read(src);
+    // cv.imshow('canvasOutput', src);
+        // console.log(cap.get(CAP_PROP_FRAME_WIDTH ));
     // cv.flip(src, src, 1);
     var center = new cv.Point(pointcX, pointcY);
     dst = src.clone();
@@ -75,6 +84,31 @@ function processVideo() {
 
 function main(){
     if (cv_built == true && streaming){
+        cap = new cv.VideoCapture(video);
+        if (actual_height == 0){
+            actual_height = cap.video.videoHeight; 
+            resetcap = true;
+            video.height = cap.video.videoHeight;
+        }
+        if (actual_width == 0){
+            actual_width = cap.video.videoWidth; 
+            video.width = cap.video.videoWidth; 
+            
+        }
+
+        if (video.width == 0){return;}
+
+        display_height = window_height;
+        var video_ratio = actual_width/actual_height;
+        display_width = Math.round(display_height*video_ratio);
+        var style_line = "width: " + display_width   + "px; height:" + display_height + "px;"
+        video.height = display_height; video.width = display_width;
+        canvas.setAttribute("style", style_line);
+        
+        if (resetcap){
+            cap = new cv.VideoCapture(video);
+        }
+        
         var begin = Date.now();
         var delay = 1000/FPS - (Date.now() - begin);
         setTimeout(processVideo, delay);
@@ -90,8 +124,7 @@ function blobdetect(src, dst, hsv){
 
     
     cv.inRange(mask, low, high, mask);
-    cv.imshow('videoCanvas', mask);
-
+    
     low.delete();
     high.delete();
 
@@ -120,21 +153,24 @@ function blobdetect(src, dst, hsv){
 }
 
 function mouseDownHandler(e) {
-
-    var relativeX = e.clientX - canvas.offsetLeft;
-    var relativeY = e.clientY - canvas.offsetTop;
-    if(relativeX > 0 && relativeX < canvas.width) {
+    if (video.width == 0){return;}
+    
+    [relativeX, relativeY] = getMousePosition(e, canvas);
+    
+    if(relativeX > 0 && relativeX < display_width) {
         pointcX = relativeX;
     }
 
-    if(relativeY > 0 && relativeY < canvas.height) {
+    if(relativeY > 0 && relativeY < display_height) {
         pointcY = relativeY;
     }
 
-    if (cv_built){
-        src_local = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+    // console.log(pointcX, pointcY);
+    if (cv_built && cap != null){
+        
+        src_local = new cv.Mat(display_height, display_width, cv.CV_8UC4);
         cap.read(src_local);
-        var hsv_local = new cv.Mat(video.height, video.width, cv.CV_8UC3);
+        var hsv_local = new cv.Mat(display_height, display_width, cv.CV_8UC3);
         cv.cvtColor(src_local, hsv_local, cv.COLOR_RGB2HSV);
         pickColor(src_local, hsv_local, pointcX, pointcY);
         hsv_local.delete();
@@ -145,13 +181,13 @@ function mouseDownHandler(e) {
 function pickColor(src_local, hsv_local, x, y){
 
 
-    console.log(hsv_local.ucharPtr(x,y));
+    // console.log(hsv_local.ucharPtr(x,y));
     var center = new cv.Point(x, y);
     var pixel = hsv_local.ucharPtr(y, x);
 
     upper =  arrayClamp([pixel[0] + 10, pixel[1] + 80, pixel[2] + 100, 255],0,255);
     lower =  arrayClamp([pixel[0] - 10, pixel[1] - 80, pixel[2] - 100, 255],0,255);
-    console.log(pixel);
+    
 }
 
 
@@ -160,7 +196,6 @@ function clamp(num, min, max) {
 }
 
 function arrayClamp(og_array, min, max) {
-    // // console.log(og_array, min, max);
     for(c = 0; c < og_array.length; c++){
         num = og_array[c];
         og_array[c] = clamp(num, min, max);
@@ -170,8 +205,7 @@ function arrayClamp(og_array, min, max) {
 
 function mouseMoveHandler(e) {
 
-    var relativeX = e.clientX - canvas.offsetLeft;
-    var relativeY = e.clientY - canvas.offsetTop;
+    [relativeX, relativeY] = getMousePosition(e, canvas);
     if(relativeX > 0 && relativeX < canvas.width) {
         pointX = relativeX;
     }
@@ -179,6 +213,13 @@ function mouseMoveHandler(e) {
     if(relativeY > 0 && relativeY < canvas.height) {
         pointY = relativeY;
     }
+}
+
+function getMousePosition(e, canvas){
+    // console.log(e.pageX, e.pageY);
+    var relativeX = e.pageX - canvas.offsetLeft;
+    var relativeY = e.pageY - canvas.offsetTop;
+    return[relativeX, relativeY];
 }
 
 
