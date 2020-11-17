@@ -30,7 +30,7 @@ var pointcX = 0;
 var pointcY = 0;
 
 var lower = [145, 67, 20, 0];
-var higher = [165, 67, 20, 255];
+var upper = [165, 67, 20, 255];
 var mom = null;
 
 
@@ -83,7 +83,7 @@ function main(){
 
 function blobdetect(src, dst, hsv){
     var low = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), lower);
-    var high = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), higher);
+    var high = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), upper);
     var mask = hsv.clone();
     var contours = new cv.MatVector();
     var hierarchy = new cv.Mat();
@@ -149,7 +149,7 @@ function pickColor(src_local, hsv_local, x, y){
     var center = new cv.Point(x, y);
     var pixel = hsv_local.ucharPtr(y, x);
 
-    higher =  arrayClamp([pixel[0] + 10, pixel[1] + 80, pixel[2] + 100, 255],0,255);
+    upper =  arrayClamp([pixel[0] + 10, pixel[1] + 80, pixel[2] + 100, 255],0,255);
     lower =  arrayClamp([pixel[0] - 10, pixel[1] - 80, pixel[2] - 100, 255],0,255);
     console.log(pixel);
 }
