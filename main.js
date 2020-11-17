@@ -240,7 +240,7 @@ function keypressed(e){
 function resetDisplaySize(){
     window_width = window.innerWidth;
     window_height = window.innerHeight;
-    display_height = window_height;
+    display_height = window_height - 10;
     var video_ratio = actual_width/actual_height;
     display_width = Math.round(display_height*video_ratio);
     var style_line = "width: " + display_width   + "px; height:" + display_height + "px;"
