@@ -34,7 +34,7 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: false })
 
 var cv_built = false;
 var cap = null;
-const FPS = 30;
+const FPS = 60;
 var pointX = 0;
 var pointY = 0;
 var actual_height = 0;
@@ -70,7 +70,7 @@ function processVideo() {
     cap.read(src);
     // cv.imshow('canvasOutput', src);
         // console.log(cap.get(CAP_PROP_FRAME_WIDTH ));
-    // cv.flip(src, src, 1);
+    cv.flip(src, src, 1);
     var center = new cv.Point(pointcX, pointcY);
     dst = src.clone();
     cv.circle(dst, center, 1, [200,255,0,255], 8);
@@ -179,7 +179,7 @@ function pickColor(src_local, hsv_local, x, y){
 
     // console.log(hsv_local.ucharPtr(x,y));
     var center = new cv.Point(x, y);
-    var pixel = hsv_local.ucharPtr(y, x);
+    var pixel = hsv_local.ucharPtr(y, hsv_local.cols - x);
 
     upper =  arrayClamp([pixel[0] + 10, pixel[1] + 80, pixel[2] + 100, 255],0,255);
     lower =  arrayClamp([pixel[0] - 10, pixel[1] - 80, pixel[2] - 100, 255],0,255);
